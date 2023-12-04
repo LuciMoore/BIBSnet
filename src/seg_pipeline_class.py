@@ -11,11 +11,8 @@ from src.validate import (
     valid_whole_number,
     valid_readable_file
 )
-from src.utils import (
-    get_by_path,
-    set_by_path,
-    del_by_path,
-    get_directory_structure
+from src.filetree import (
+    filetree
 )
 
 class SegmentationPipeline():
@@ -33,15 +30,21 @@ class SegmentationPipeline():
     def __init__(self):
 
         self.args = None
-        self.filetree = {}
+        self.filetree = filetree
         self.bids = {}
+        self.stage_names = ["preBIBSnet", "BIBSnet", "postBIBSnet"]
+
+
+        # get command line arguments
+        self.get_args()
+
+        # set self.stages based on user input for start and end
+        self.set_stages()
 
         # set log level constants, make logger
         self.VERBOSE_LEVEL_NUM = 15
         self.SUBPROCESS_LEVEL_NUM = self.VERBOSE_LEVEL_NUM -1
         self.make_logger()
-
-        self.get_args()
 
         if self.args.verbose:
             self.LOGGER.setLevel(self.VERBOSE_LEVEL_NUM)
@@ -50,14 +53,75 @@ class SegmentationPipeline():
         else:
             self.LOGGER.setLevel(logging.INFO)
 
-        self.create_directories()
+        # output warnings for depricated arguments
+        if self.args.parameter_json is not None:
+            self.LOGGER.warning("Parameter JSON is deprecated.\nAll arguments formerly in this file are now flags.\nSee https://bibsnet.readthedocs.io/ for updated usage.")
+
+        # parse bids inputs
+        self.get_bids()
+
+        # check if user input sub/ses exist
+        if self.args.participant_label:
+            if self.args.participant_label not in self.get_subjects():
+                sys.exit(f"Subject {self.args.participant_label} not found in bids_dir.")
+        if self.args.session:
+            # can we use this without a subject?
+            pass
+
+     
+    def make_logger(self):
+
+        # Add new logging level between DEBUG and INFO
+        logging.addLevelName(self.VERBOSE_LEVEL_NUM, "VERBOSE")
+        def verbose(self, message, *args, **kws):
+            if self.isEnabledFor(self.VERBOSE_LEVEL_NUM):
+                self._log(self.VERBOSE_LEVEL_NUM, message, args, **kws)
+        logging.Logger.verbose = verbose
+
+        # Add new logging level for subprocesses
+        logging.addLevelName(self.SUBPROCESS_LEVEL_NUM, "SUBPROCESS")
+        def subprocess(self, message, *args, **kws):
+            if self.isEnabledFor(self.SUBPROCESS_LEVEL_NUM):
+                self._log(self.SUBPROCESS_LEVEL_NUM, message, args, **kws)
+        logging.Logger.subprocess = subprocess
+        
+        log = logging.getLogger("BIBSnet")
+
+        # Create standard format for log statements
+        format = "\n%(levelname)s %(asctime)s: %(message)s"
+        formatter = logging.Formatter(format)
+        subprocess_format = "%(id)s %(asctime)s: %(message)s"
+        subprocess_formatter = logging.Formatter(subprocess_format)
+
+        # Redirect INFO and DEBUG to stdout
+        handle_out = logging.StreamHandler(sys.stdout)
+        handle_out.setLevel(logging.DEBUG)
+        handle_out.addFilter(lambda record: record.levelno <= logging.INFO)
+        handle_out.addFilter(lambda record: record.levelno != self.SUBPROCESS_LEVEL_NUM)
+        handle_out.setFormatter(formatter)
+        log.addHandler(handle_out)
+
+        # Set special format for subprocess level
+        handle_subprocess = logging.StreamHandler(sys.stdout)
+        handle_subprocess.setLevel(self.SUBPROCESS_LEVEL_NUM)
+        handle_subprocess.addFilter(lambda record: record.levelno <= self.SUBPROCESS_LEVEL_NUM)
+        handle_subprocess.setFormatter(subprocess_formatter)
+        log.addHandler(handle_subprocess)
+
+        # Redirect WARNING+ to stderr
+        handle_err = logging.StreamHandler(sys.stderr)
+        handle_err.setLevel(logging.WARNING)
+        handle_err.setFormatter(formatter)
+        log.addHandler(handle_err)
+
+        self.LOGGER = log
+
 
     def get_args(self):
         """
         parses command line arguments and sets them to self.args
         """
-        stage_names = ["preBIBSnet", "BIBSnet", "postBIBSnet"]
-        default_end_stage = stage_names[-1]
+        default_end_stage = self.stage_names[-1]
         default_fsl_bin_path = "/opt/fsl-6.0.5.1/bin/"
         default_nnUNet_configuration = "3d_fullres"
         default_nnUNet_predict_path = "/opt/conda/bin/nnUNet_predict"
@@ -104,8 +168,8 @@ class SegmentationPipeline():
         )
         parser.add_argument(
             "-end", "--ending-stage", dest="end",
-            choices=stage_names, default=default_end_stage,
-            help=msg_stage.format("last", default_end_stage, ", ".join(stage_names))
+            choices=self.stage_names, default=default_end_stage,
+            help=msg_stage.format("last", default_end_stage, ", ".join(self.stage_names))
         )
         parser.add_argument(
             "--fsl-bin-path",
@@ -158,8 +222,8 @@ class SegmentationPipeline():
         )
         parser.add_argument(
             "-start", "--starting-stage", dest="start",
-            choices=stage_names, default=stage_names[0],   # TODO Change default to start where we left off by checking which stages' prerequisites and outputs already exist
-            help=msg_stage.format("first", stage_names[0], ", ".join(stage_names))
+            choices=self.stage_names, default=self.stage_names[0],   # TODO Change default to start where we left off by checking which stages' prerequisites and outputs already exist
+            help=msg_stage.format("first", self.stage_names[0], ", ".join(self.stage_names))
         )
         parser.add_argument(
             "-w", "--work-dir", type=valid_output_dir, dest="work_dir",
@@ -192,54 +256,6 @@ class SegmentationPipeline():
         self.args = parser.parse_args()
     
 
-    def make_logger(self):
-
-        # Add new logging level between DEBUG and INFO
-        logging.addLevelName(self.VERBOSE_LEVEL_NUM, "VERBOSE")
-        def verbose(self, message, *args, **kws):
-            if self.isEnabledFor(self.VERBOSE_LEVEL_NUM):
-                self._log(self.VERBOSE_LEVEL_NUM, message, args, **kws)
-        logging.Logger.verbose = verbose
-
-        # Add new logging level for subprocesses
-        logging.addLevelName(self.SUBPROCESS_LEVEL_NUM, "SUBPROCESS")
-        def subprocess(self, message, *args, **kws):
-            if self.isEnabledFor(self.SUBPROCESS_LEVEL_NUM):
-                self._log(self.SUBPROCESS_LEVEL_NUM, message, args, **kws)
-        logging.Logger.subprocess = subprocess
-        
-        log = logging.getLogger("BIBSnet")
-
-        # Create standard format for log statements
-        format = "\n%(levelname)s %(asctime)s: %(message)s"
-        formatter = logging.Formatter(format)
-        subprocess_format = "%(id)s %(asctime)s: %(message)s"
-        subprocess_formatter = logging.Formatter(subprocess_format)
-
-        # Redirect INFO and DEBUG to stdout
-        handle_out = logging.StreamHandler(sys.stdout)
-        handle_out.setLevel(logging.DEBUG)
-        handle_out.addFilter(lambda record: record.levelno <= logging.INFO)
-        handle_out.addFilter(lambda record: record.levelno != self.SUBPROCESS_LEVEL_NUM)
-        handle_out.setFormatter(formatter)
-        log.addHandler(handle_out)
-
-        # Set special format for subprocess level
-        handle_subprocess = logging.StreamHandler(sys.stdout)
-        handle_subprocess.setLevel(self.SUBPROCESS_LEVEL_NUM)
-        handle_subprocess.addFilter(lambda record: record.levelno <= self.SUBPROCESS_LEVEL_NUM)
-        handle_subprocess.setFormatter(subprocess_formatter)
-        log.addHandler(handle_subprocess)
-
-        # Redirect WARNING+ to stderr
-        handle_err = logging.StreamHandler(sys.stderr)
-        handle_err.setLevel(logging.WARNING)
-        handle_err.setFormatter(formatter)
-        log.addHandler(handle_err)
-
-        self.LOGGER = log
-
-
     def get_bids(self):
         
         """
@@ -266,15 +282,21 @@ class SegmentationPipeline():
         self.bids=bids
 
 
-    def create_directories(self):
-        work_dir = self.args.work_dir
-        print(work_dir)
-        self.build_directory(work_dir)
-        self.build_directory(paths=[self.args.output_dir])
+    def set_stages(self):
+        """
+        Set stages to run based on user input for start and end.
+        Error if start is a later stage than end.
+        """
+        start_index = self.stage_names.index(self.args.start)
+        end_index = self.stage_names.index(self.args.end) + 1
+        if start_index > end_index - 1:
+            sys.exit(f"Error: {self.args.end} stage must happen before {self.args.start} stage.")
+        self.stages = self.stage_names[start_index:end_index]
 
 
-    def build_directory(self, paths):
-        print(paths)
-        path = os.path.join(paths)
-        os.makedirs(path, exist_ok=True)
-        set_by_path(self.filetree, paths, {})
+    def get_subjects(self):
+        return self.bids.keys()
+
+
+    def get_sessions(self, subject):
+        return self.bids[subject].keys()
