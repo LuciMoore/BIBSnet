@@ -1,0 +1,112 @@
+{
+    "derivatives": {
+        "bibsnet": {
+            "dataset_description.json" : "dataset_description.json",
+            "subject": {
+                "session": {
+                    "anat": {
+                        "T1w-aseg-json": "sub-M1003_ses-20191205_space-T1w_desc-aseg_dseg.json",
+                        "T1w-aseg-nii": "sub-M1003_ses-20191205_space-T1w_desc-aseg_dseg.nii.gz",
+                        "T1w-mask-json": "sub-M1003_ses-20191205_space-T1w_desc-brain_mask.json",
+                        "T1w-mask-nii": "sub-M1003_ses-20191205_space-T1w_desc-brain_mask.nii.gz",
+                        "T2w-aseg-json": "sub-M1003_ses-20191205_space-T2w_desc-aseg_dseg.json",
+                        "T2w-aseg-nii": "sub-M1003_ses-20191205_space-T2w_desc-aseg_dseg.nii.gz",
+                        "T2w-mask-json": "sub-M1003_ses-20191205_space-T2w_desc-brain_mask.json",
+                        "T2w-mask-nii": "sub-M1003_ses-20191205_space-T2w_desc-brain_mask.nii.gz"
+                    }
+                }
+            }
+        }
+    },
+    "work": {
+        "bibsnet": {
+            "sub-M1003": {
+                "ses-20191205": {
+                    "input": {
+                        "T1": "sub-M1003_ses-20191205_optimal_resized_0000.nii.gz",
+                        "T2": "sub-M1003_ses-20191205_optimal_resized_0001.nii.gz"
+                    },
+                    "output": {
+                        "plans-pkl": "plans.pkl",
+                        "prediction-time-txt": "prediction_time.txt",
+                        "optimal-resized-nii": "sub-M1003_ses-20191205_optimal_resized.nii.gz"
+                    }
+    ├── postbibsnet
+    │   └── sub-M1003
+    │       └── ses-20191205
+    │           ├── chirality_correction
+    │           │   ├── corrected_sub-M1003_ses-20191205_optimal_resized_dummy.nii.gz
+    │           │   ├── corrected_sub-M1003_ses-20191205_optimal_resized.nii.gz
+    │           │   ├── native-T1_sub-M1003_ses-20191205_optimal_resized.nii.gz
+    │           │   ├── native-T1_sub-M1003_ses-20191205_optimal_resized_T1_mask.nii.gz
+    │           │   ├── native-T2_sub-M1003_ses-20191205_optimal_resized.nii.gz
+    │           │   ├── native-T2_sub-M1003_ses-20191205_optimal_resized_T2_mask.nii.gz
+    │           │   ├── seg_reg_to_T1w_native.mat
+    │           │   └── seg_reg_to_T2w_native.mat
+    │           ├── lrmask_dil_wd
+    │           │   ├── dilated_LRmask.nii.gz
+    │           │   ├── Lmask_holes_filled.nii.gz
+    │           │   ├── Lmask.nii.gz
+    │           │   ├── LRmask_dil.nii.gz
+    │           │   ├── Mmask_holes_filled_label3.nii.gz
+    │           │   ├── Mmask_holes_filled.nii.gz
+    │           │   ├── Mmask.nii.gz
+    │           │   ├── recombined_mask_LR.nii.gz
+    │           │   ├── Rmask_holes_filled_label2.nii.gz
+    │           │   ├── Rmask_holes_filled.nii.gz
+    │           │   └── Rmask.nii.gz
+    │           ├── LRmask.nii.gz
+    │           ├── preBIBSnet_crop_T1w_to_BIBS_template.mat
+    │           ├── preBIBSnet_crop_T2w_to_BIBS_template.mat
+    │           └── wd
+    │               ├── antsregAffine.txt
+    │               ├── antsregInverseWarp.nii.gz
+    │               └── antsregWarp.nii.gz
+    └── prebibsnet
+        └── sub-M1003
+            └── ses-20191205
+                ├── averaged
+                │   ├── sub-M1003_ses-20191205_0000.nii.gz
+                │   └── sub-M1003_ses-20191205_0001.nii.gz
+                ├── cropped
+                │   ├── T1w
+                │   │   ├── crop2full.mat
+                │   │   └── sub-M1003_ses-20191205_0000.nii.gz
+                │   └── T2w
+                │       ├── crop2full.mat
+                │       └── sub-M1003_ses-20191205_0001.nii.gz
+                └── resized
+                    ├── ACPC_align
+                    │   ├── ACPC_aligned_T1w.nii.gz
+                    │   ├── ACPC_aligned_T2w.nii.gz
+                    │   ├── ACPC_T1w_registered_to_T1w.nii.gz
+                    │   ├── ACPC_T2w_registered_to_T1w.nii.gz
+                    │   ├── crop_T1w_to_BIBS_template.mat
+                    │   ├── cropT2tocropT1.mat
+                    │   ├── crop_T2w_to_BIBS_template.mat
+                    │   ├── preBIBSnet_final_0000.nii.gz
+                    │   ├── preBIBSnet_final_0001.nii.gz
+                    │   ├── T1w_acpc2rigidbody.mat
+                    │   ├── T1w_crop2acpc.mat
+                    │   ├── T1w_full2acpc.mat
+                    │   ├── T1w_full2crop.mat
+                    │   ├── T2w_acpc2rigidbody.mat
+                    │   ├── T2w_crop2acpc.mat
+                    │   ├── T2w_full2acpc.mat
+                    │   ├── T2w_full2crop.mat
+                    │   └── T2w_to_rigidbody.mat
+                    └── xfms
+                        ├── crop_T1w_to_BIBS_template.mat
+                        ├── cropT2tocropT1.mat
+                        ├── crop_T2w_to_BIBS_template.mat
+                        ├── full2cropT1w.mat
+                        ├── full2cropT2toT1.mat
+                        ├── full2cropT2w.mat
+                        ├── full_crop_T1w_to_BIBS_template.mat
+                        ├── full_crop_T2w_to_BIBS_template.mat
+                        ├── preBIBSnet_final_0000.nii.gz
+                        ├── preBIBSnet_final_0001.nii.gz
+                        ├── T1w_to_BIBS.nii.gz
+                        ├── T2w_registered_to_T1w.nii.gz
+                        └── T2w_to_BIBS.nii.gz
+}
