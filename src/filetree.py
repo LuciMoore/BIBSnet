@@ -60,7 +60,47 @@ filetree = {
                 }
             },
         },
-        "bibsnet": {},
-        "postbibsnet": {}
+        "bibsnet": {
+            "input": {
+                "optimal-resized-0000-nii": "{{WORK}}/bibsnet/{{SUBJECT}}/{{SESSION}}/input/{{SUBJECT}}_{{SESSION}}_optimal_resized_0000.nii.gz",
+                "optimal-resized-0001-nii": "{{WORK}}/bibsnet/{{SUBJECT}}/{{SESSION}}/input/{{SUBJECT}}_{{SESSION}}_optimal_resized_0001.nii.gz"
+            },
+            "output": {
+                "plans-pkl": "{{WORK}}/bibsnet/{{SUBJECT}}/{{SESSION}}/output/plans.pkl",
+                "prediction-time.txt": "{{WORK}}/bibsnet/{{SUBJECT}}/{{SESSION}}/output/prediction_time.txt",
+                "optimal-resized-nii": "{{WORK}}/bibsnet/{{SUBJECT}}/{{SESSION}}/output/{{SUBJECT}}_{{SESSION}}_optimal_resized.nii.gz"
+            }
+        },
+        "postbibsnet": {
+            "chirality_correction": {
+                "corrected-optimal-resized-dummy-nii": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/chirality_correction/corrected_sub-M1003_ses-20191205_optimal_resized_dummy.nii.gz", 
+                "corrected-optimal-resized-nii": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/chirality_correction/corrected_sub-M1003_ses-20191205_optimal_resized.nii.gz", 
+                "native-T1-optimal-resized-nii": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/chirality_correction/native-T1_sub-M1003_ses-20191205_optimal_resized.nii.gz", 
+                "native-T1-optimal-resized-T1-mask-nii": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/chirality_correction/native-T1_sub-M1003_ses-20191205_optimal_resized_T1_mask.nii.gz", 
+                "native-T2-optimal-resized-nii": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/chirality_correction/native-T2_sub-M1003_ses-20191205_optimal_resized.nii.gz", 
+                "native-T2-optimal-resized-T2-mask-nii": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/chirality_correction/native-T2_sub-M1003_ses-20191205_optimal_resized_T2_mask.nii.gz", 
+                "seg-reg-to-T1w-native-mat": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/chirality_correction/seg_reg_to_T1w_native.mat", 
+                "seg-reg-to-T2w-native-mat": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/chirality_correction/seg_reg_to_T2w_native.mat", 
+            },
+            "lrmask_dil_wd": {
+                "dilated-LRmask-nii": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/lrmask_dil_wd/dilated_LRmask.nii.gz", 
+                "Lmask-holes-filled-nii": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/lrmask_dil_wd/Lmask_holes_filled.nii.gz", 
+                "Lmask-nii": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/lrmask_dil_wd/Lmask.nii.gz", 
+                "LRmask-dil-nii": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/lrmask_dil_wd/LRmask_dil.nii.gz", 
+                "Mmask-holes-filled-label3-nii": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/lrmask_dil_wd/Mmask_holes_filled_label3.nii.gz", 
+                "Mmask-holes-filled-nii": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/lrmask_dil_wd/Mmask_holes_filled.nii.gz", 
+                "Mmask-nii": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/lrmask_dil_wd/Mmask.nii.gz", 
+                "recombined-mask-LR-nii": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/lrmask_dil_wd/recombined_mask_LR.nii.gz", 
+                "Rmask-holes-filled-label2-nii": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/lrmask_dil_wd/Rmask_holes_filled_label2.nii.gz", 
+                "Rmask-holes-filled-nii": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/lrmask_dil_wd/Rmask_holes_filled.nii.gz", 
+                "Rmask-nii": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/lrmask_dil_wd/Rmask.nii.gz                ", 
+            },
+            "wd": {
+                "ants-reg-affine-txt": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/wd/antsregAffine.txt",
+                "ants-reg-inverse-warp-nii": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/wd/antsregInverseWarp.nii.gz",
+                "ants-reg-warp-nii": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/wd/antsregWarp.nii.gz"
+            },
+            "LRmask-nii": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/LRmask.nii.gz"
+        }
     }
 }

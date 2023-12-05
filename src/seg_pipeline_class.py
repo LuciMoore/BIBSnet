@@ -25,7 +25,10 @@ class SegmentationPipeline():
     LOGGER: logging object, general logger for use throughout the pipeline. Created by make_logger method.
     VERBOSE_LEVEL_NUM: int, used to set logging levels in self.LOGGER
     SUBPROCESS_LEVEL_NUM: int, used to set logging levels in self.LOGGER
-    filetree: dict, mimics file tree of directories used by BIBSnet. 
+    filetree: dict, mimics file tree of directories used by BIBSnet.
+    stage_names: list, names of all possible stages to be run.
+    stages: list, names of stages the user has selected to run from stage_names
+    bids: dict, dictionary mimicing the file structure of the input data. tracks sub, ses, t1/t2 scans
     """
     def __init__(self):
 
@@ -33,6 +36,7 @@ class SegmentationPipeline():
         self.filetree = filetree
         self.bids = {}
         self.stage_names = ["preBIBSnet", "BIBSnet", "postBIBSnet"]
+        self.stages = None
 
 
         # get command line arguments
@@ -59,14 +63,7 @@ class SegmentationPipeline():
 
         # parse bids inputs
         self.get_bids()
-
-        # check if user input sub/ses exist
-        if self.args.participant_label:
-            if self.args.participant_label not in self.get_subjects():
-                sys.exit(f"Subject {self.args.participant_label} not found in bids_dir.")
-        if self.args.session:
-            # can we use this without a subject?
-            pass
+        self.subjects = self.get_subjects()
 
      
     def make_logger(self):
@@ -295,8 +292,46 @@ class SegmentationPipeline():
 
 
     def get_subjects(self):
-        return self.bids.keys()
+        bids_subjects = self.bids.keys()
+        user_input_subject = self.args.participant_label
+        if user_input_subject:
+            if user_input_subject not in bids_subjects:
+                sys.exit(f"User input subject '{user_input_subject}' not found in bids_dir.")
+            return [user_input_subject]
+        else:
+            return bids_subjects
 
 
     def get_sessions(self, subject):
-        return self.bids[subject].keys()
+        bids_sessions = self.bids[subject].keys()
+        user_input_session = self.args.session
+        if self.args.session:
+            if user_input_session not in bids_sessions:
+                self.LOGGER.error(f"User input session '{user_input_session}' not found in bids_dir for subject {subject}.")
+                return []
+            else:
+                return [user_input_session]
+        else:
+            return bids_sessions
+
+
+    def make_dirs(self, subject, session):
+        needed_dirs = {}
+        self.get_needed_dirs(needed_dirs, self.filetree)
+        needed_dirs = list(needed_dirs.keys())
+        for path in needed_dirs:
+            dir = self.fill_path_template(path, subject, session)
+            os.makedirs(dir, exist_ok=True)
+
+
+    def get_needed_dirs(self, needed_dirs, filetree):
+        for path in filetree.values():
+            if isinstance(path, str):
+                dir = '/'.join(path.split('/')[:-1])
+                needed_dirs[dir] = ''
+            else:
+                self.get_needed_dirs(needed_dirs, path)
+
+
+    def fill_path_template(self, template, subject, session):
+        return template.replace('{{WORK}}', self.args.work_dir).replace('{{DERIVATIVES}}', self.args.output_dir).replace('{{SUBJECT}}', subject).replace('{{SESSION}}', session)
