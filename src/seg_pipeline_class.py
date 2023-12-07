@@ -3,6 +3,7 @@ import os
 import logging
 import sys
 from bids import BIDSLayout
+import pandas as pd
 
 from src.validate import ( 
     valid_output_dir,
@@ -229,7 +230,7 @@ class SegmentationPipeline():
                 "Example: /path/to/working/directory")
         )
         parser.add_argument(
-            "-z", "--brain-z-size", action="store_true",
+            "-z", "--brain-z-size", dest="brain_z_size", action="store_true",
             help=("Include this flag to infer participants' brain height (z) "
                 "using the sub-{}_sessions.tsv or participant.tsv brain_z_size column." 
                 "Otherwise, BIBSnet will estimate the brain height from the participant "
@@ -263,19 +264,21 @@ class SegmentationPipeline():
                 and may also map "session" to its session ID string
         """
         layout = BIDSLayout(self.args.bids_dir)
-        bids = {}
+        bids = {'subjects': {}}
+        bids['participants-tsv'] = layout.get(suffix='participants', extension='tsv', return_type='filename')
         subjects = layout.get_subjects()
         sessions = layout.get_sessions()
         for subject in subjects:
-            bids[subject] = {}
+            bids['subjects'][subject] = {'sessions': {}}
+            bids['subjects'][subject]['sessions-tsv'] = layout.get(subject=subject, suffix='sessions', extension='tsv', return_type='filename')
             for session in sessions:
                 sub_ses = layout.get(subject=subject, session=session)
                 if sub_ses:
-                    bids[subject][session] = {}
+                    bids['subjects'][subject]['sessions'][session] = {'scans': {} }
                     t1s = layout.get(subject=subject, session=session, suffix='T1w', extension='nii.gz', return_type='filename')
                     t2s = layout.get(subject=subject, session=session, suffix='T2w', extension='nii.gz', return_type='filename')
-                    bids[subject][session]['T1w'] = t1s
-                    bids[subject][session]['T2w'] = t2s
+                    bids['subjects'][subject]['sessions'][session]['scans']['T1w'] = t1s
+                    bids['subjects'][subject]['sessions'][session]['scans']['T2w'] = t2s
         self.bids=bids
 
 
@@ -292,7 +295,7 @@ class SegmentationPipeline():
 
 
     def get_subjects(self):
-        bids_subjects = self.bids.keys()
+        bids_subjects = self.bids['subjects'].keys()
         user_input_subject = self.args.participant_label
         if user_input_subject:
             if user_input_subject not in bids_subjects:
@@ -303,7 +306,7 @@ class SegmentationPipeline():
 
 
     def get_sessions(self, subject):
-        bids_sessions = self.bids[subject].keys()
+        bids_sessions = self.bids['subjects'][subject]['sessions'].keys()
         user_input_session = self.args.session
         if self.args.session:
             if user_input_session not in bids_sessions:
@@ -321,7 +324,10 @@ class SegmentationPipeline():
         needed_dirs = list(needed_dirs.keys())
         for path in needed_dirs:
             dir = self.fill_path_template(path, subject, session)
-            os.makedirs(dir, exist_ok=True)
+            try:
+                os.makedirs(dir, exist_ok=True)
+            except Exception as e:
+                self.LOGGER.error(f"Error making required directories:\n{e}")
 
 
     def get_needed_dirs(self, needed_dirs, filetree):
@@ -335,3 +341,27 @@ class SegmentationPipeline():
 
     def fill_path_template(self, template, subject, session):
         return template.replace('{{WORK}}', self.args.work_dir).replace('{{DERIVATIVES}}', self.args.output_dir).replace('{{SUBJECT}}', subject).replace('{{SESSION}}', session)
+    
+
+    def get_age(self, subject, session):
+        if self.args.age_months:
+            return self.args.age_months
+        else:
+            if self.bids['subjects'][subject]['sessions-tsv']:
+                tsv_df = pd.read_csv(self.bids['subjects'][subject]['sessions-tsv'][0], delim_whitespace=True, index_col='session_id')
+                return tsv_df.at[f"ses-{session}", 'age']
+            elif self.bids['participants-tsv']:
+                tsv_df = pd.read_csv(self.bids['participants-tsv'][0], delim_whitespace=True, index_col='participant_id')
+                return tsv_df.at[f"sub-{subject}", 'age']
+            else:
+                sys.exit(f"No age found for {subject}, {session}")
+
+
+    def get_brain_size(self, subject, session):
+        if self.args.brain_z_size:
+            return self.args.brain_z_size
+        else:
+            # get age
+            # lookup brain size from table
+            pass
+
