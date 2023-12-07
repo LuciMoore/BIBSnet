@@ -102,5 +102,16 @@ filetree = {
             },
             "LRmask-nii": "{{WORK}}/postbibsnet/{{SUBJECT}}/{{SESSION}}/LRmask.nii.gz"
         }
+    },
+    "data":{
+        "age-to-head-radius-csv": "{{DATA}}/age_to_avg_head_radius_BCP.csv",
+        "models-csv": "{{DATA}}/models.csv",
+        "templates-dir": "{{DATA}}/chirality_masks/",
+        "dataset-description-json": "{{DATA}}/dataset_description.json",
+        "segment-lookup-table": "{{DATA}}/look_up_tables/FreeSurferColorLUT.txt",
+        "sidecar-template-json": "{{DATA}}/sidecar_template.json",
+        "t1-reference-image": "{{DATA}}/MNI_templates/INFANT_MNI_T1_1mm.nii.gz",
+        "t2-reference-image": "{{DATA}}/MNI_templates/INFANT_MNI_T2_1mm.nii.gz",
+        "identity-matrix": "{{DATA}}/identity_matrix.mat"
     }
 }
