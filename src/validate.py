@@ -1,8 +1,6 @@
 import argparse
 import os
 
-from src.utilities import ensure_prefixed
-
 
 def always_true(*_):
     """
@@ -81,7 +79,7 @@ def valid_subj_ses(in_arg, pfx, name):
     :param name: String describing what in_arg should be (e.g. "subject")
     :return: True if in_arg is a valid subject ID or session name; else False
     """
-    return validate(in_arg, always_true, lambda x: ensure_prefixed(x, pfx),
+    return validate(in_arg, always_true, lambda x: x if x[:len(pfx)] == pfx else pfx + x,
                     "'{}'" + " is not a valid {}".format(name))
 
 

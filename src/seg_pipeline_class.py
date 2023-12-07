@@ -4,6 +4,7 @@ import logging
 import sys
 from bids import BIDSLayout
 import pandas as pd
+import json
 
 from src.validate import ( 
     valid_output_dir,
@@ -24,12 +25,11 @@ class SegmentationPipeline():
     ----------
     args: argparse Namespace object, command line arguments submitted by the user. Set by get_args method.
     LOGGER: logging object, general logger for use throughout the pipeline. Created by make_logger method.
-    VERBOSE_LEVEL_NUM: int, used to set logging levels in self.LOGGER
-    SUBPROCESS_LEVEL_NUM: int, used to set logging levels in self.LOGGER
     filetree: dict, mimics file tree of directories used by BIBSnet.
     stage_names: list, names of all possible stages to be run.
     stages: list, names of stages the user has selected to run from stage_names
     bids: dict, dictionary mimicing the file structure of the input data. tracks sub, ses, t1/t2 scans
+    subjects: list, subjects in the bids input
     """
     def __init__(self):
 
@@ -38,6 +38,7 @@ class SegmentationPipeline():
         self.bids = {}
         self.stage_names = ["preBIBSnet", "BIBSnet", "postBIBSnet"]
         self.stages = None
+        self.script_dir = os.path.dirname(os.path.dirname(__file__))
 
 
         # get command line arguments
@@ -47,12 +48,12 @@ class SegmentationPipeline():
         self.set_stages()
 
         # set log level constants, make logger
-        self.VERBOSE_LEVEL_NUM = 15
-        self.SUBPROCESS_LEVEL_NUM = self.VERBOSE_LEVEL_NUM -1
-        self.make_logger()
+        VERBOSE_LEVEL_NUM = 15
+        SUBPROCESS_LEVEL_NUM = VERBOSE_LEVEL_NUM -1
+        self.LOGGER = self.make_logger(VERBOSE_LEVEL_NUM, SUBPROCESS_LEVEL_NUM)
 
         if self.args.verbose:
-            self.LOGGER.setLevel(self.VERBOSE_LEVEL_NUM)
+            self.LOGGER.setLevel(VERBOSE_LEVEL_NUM)
         elif self.args.debug:
             self.LOGGER.setLevel(logging.DEBUG)
         else:
@@ -64,23 +65,25 @@ class SegmentationPipeline():
 
         # parse bids inputs
         self.get_bids()
+        self.LOGGER.verbose(f"BIBSnet found the following BIDS input:\n{json.dumps(self.bids, indent=4)}")
         self.subjects = self.get_subjects()
 
-     
-    def make_logger(self):
+
+    @staticmethod
+    def make_logger(verbose_level_num, subprocess_level_num):
 
         # Add new logging level between DEBUG and INFO
-        logging.addLevelName(self.VERBOSE_LEVEL_NUM, "VERBOSE")
+        logging.addLevelName(verbose_level_num, "VERBOSE")
         def verbose(self, message, *args, **kws):
-            if self.isEnabledFor(self.VERBOSE_LEVEL_NUM):
-                self._log(self.VERBOSE_LEVEL_NUM, message, args, **kws)
+            if self.isEnabledFor(verbose_level_num):
+                self._log(verbose_level_num, message, args, **kws)
         logging.Logger.verbose = verbose
 
         # Add new logging level for subprocesses
-        logging.addLevelName(self.SUBPROCESS_LEVEL_NUM, "SUBPROCESS")
+        logging.addLevelName(subprocess_level_num, "SUBPROCESS")
         def subprocess(self, message, *args, **kws):
-            if self.isEnabledFor(self.SUBPROCESS_LEVEL_NUM):
-                self._log(self.SUBPROCESS_LEVEL_NUM, message, args, **kws)
+            if self.isEnabledFor(subprocess_level_num):
+                self._log(subprocess_level_num, message, args, **kws)
         logging.Logger.subprocess = subprocess
         
         log = logging.getLogger("BIBSnet")
@@ -94,15 +97,14 @@ class SegmentationPipeline():
         # Redirect INFO and DEBUG to stdout
         handle_out = logging.StreamHandler(sys.stdout)
         handle_out.setLevel(logging.DEBUG)
-        handle_out.addFilter(lambda record: record.levelno <= logging.INFO)
-        handle_out.addFilter(lambda record: record.levelno != self.SUBPROCESS_LEVEL_NUM)
+        handle_out.addFilter(lambda record: record.levelno <= logging.INFO and record.levelno != subprocess_level_num)
         handle_out.setFormatter(formatter)
         log.addHandler(handle_out)
 
         # Set special format for subprocess level
         handle_subprocess = logging.StreamHandler(sys.stdout)
-        handle_subprocess.setLevel(self.SUBPROCESS_LEVEL_NUM)
-        handle_subprocess.addFilter(lambda record: record.levelno <= self.SUBPROCESS_LEVEL_NUM)
+        handle_subprocess.setLevel(subprocess_level_num)
+        handle_subprocess.addFilter(lambda record: record.levelno == subprocess_level_num)
         handle_subprocess.setFormatter(subprocess_formatter)
         log.addHandler(handle_subprocess)
 
@@ -112,7 +114,7 @@ class SegmentationPipeline():
         handle_err.setFormatter(formatter)
         log.addHandler(handle_err)
 
-        self.LOGGER = log
+        return log
 
 
     def get_args(self):
@@ -264,22 +266,22 @@ class SegmentationPipeline():
                 and may also map "session" to its session ID string
         """
         layout = BIDSLayout(self.args.bids_dir)
-        bids = {'subjects': {}}
-        bids['participants-tsv'] = layout.get(suffix='participants', extension='tsv', return_type='filename')
+        self.bids = {'subjects': {}}
+        self.bids['participants-tsv'] = layout.get(suffix='participants', extension='tsv', return_type='filename')
         subjects = layout.get_subjects()
         sessions = layout.get_sessions()
         for subject in subjects:
-            bids['subjects'][subject] = {'sessions': {}}
-            bids['subjects'][subject]['sessions-tsv'] = layout.get(subject=subject, suffix='sessions', extension='tsv', return_type='filename')
+            self.bids['subjects'][subject] = {'sessions': {}}
+            self.bids['subjects'][subject]['sessions-tsv'] = layout.get(subject=subject, suffix='sessions', extension='tsv', return_type='filename')
             for session in sessions:
                 sub_ses = layout.get(subject=subject, session=session)
                 if sub_ses:
-                    bids['subjects'][subject]['sessions'][session] = {'scans': {} }
+                    self.bids['subjects'][subject]['sessions'][session] = {'scans': {} }
                     t1s = layout.get(subject=subject, session=session, suffix='T1w', extension='nii.gz', return_type='filename')
                     t2s = layout.get(subject=subject, session=session, suffix='T2w', extension='nii.gz', return_type='filename')
-                    bids['subjects'][subject]['sessions'][session]['scans']['T1w'] = t1s
-                    bids['subjects'][subject]['sessions'][session]['scans']['T2w'] = t2s
-        self.bids=bids
+                    self.bids['subjects'][subject]['sessions'][session]['scans']['T1w'] = t1s
+                    self.bids['subjects'][subject]['sessions'][session]['scans']['T2w'] = t2s
+                    self.bids['subjects'][subject]['sessions'][session]['age-months'] = self.get_age(subject, session)
 
 
     def set_stages(self):
@@ -349,19 +351,10 @@ class SegmentationPipeline():
         else:
             if self.bids['subjects'][subject]['sessions-tsv']:
                 tsv_df = pd.read_csv(self.bids['subjects'][subject]['sessions-tsv'][0], delim_whitespace=True, index_col='session_id')
-                return tsv_df.at[f"ses-{session}", 'age']
+                return int(tsv_df.at[f"ses-{session}", 'age'])
             elif self.bids['participants-tsv']:
                 tsv_df = pd.read_csv(self.bids['participants-tsv'][0], delim_whitespace=True, index_col='participant_id')
-                return tsv_df.at[f"sub-{subject}", 'age']
+                return int(tsv_df.at[f"sub-{subject}", 'age'])
             else:
                 sys.exit(f"No age found for {subject}, {session}")
-
-
-    def get_brain_size(self, subject, session):
-        if self.args.brain_z_size:
-            return self.args.brain_z_size
-        else:
-            # get age
-            # lookup brain size from table
-            pass
 
