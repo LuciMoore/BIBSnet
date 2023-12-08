@@ -38,7 +38,6 @@ class SegmentationPipeline():
         self.bids = {}
         self.stage_names = ["preBIBSnet", "BIBSnet", "postBIBSnet"]
         self.stages = None
-        self.script_dir = os.path.dirname(os.path.dirname(__file__))
 
 
         # get command line arguments
@@ -335,14 +334,15 @@ class SegmentationPipeline():
     def get_needed_dirs(self, needed_dirs, filetree):
         for path in filetree.values():
             if isinstance(path, str):
-                dir = '/'.join(path.split('/')[:-1])
+                dir = os.path.join(*path.split('/')[:-1])
                 needed_dirs[dir] = ''
             else:
                 self.get_needed_dirs(needed_dirs, path)
 
 
     def fill_path_template(self, template, subject, session):
-        return template.replace('{{WORK}}', self.args.work_dir).replace('{{DERIVATIVES}}', self.args.output_dir).replace('{{SUBJECT}}', subject).replace('{{SESSION}}', session)
+        data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+        return template.replace('{{WORK}}', self.args.work_dir).replace('{{DERIVATIVES}}', self.args.output_dir).replace('{{SUBJECT}}', subject).replace('{{SESSION}}', session).replace('{{DATA}}', data_dir)
     
 
     def get_age(self, subject, session):
