@@ -223,7 +223,9 @@ def validate_cli_args(cli_args, stage_names, parser):
 
         # Check whether this sub ses has T1w and/or T2w input data
         data_path_BIDS_T = dict()  # Paths to expected input data to check
+        print("LUCI TXONLY TEST")
         if cli_args["txonly"] != None:
+            print(cli_args["txonly"])
             if cli_args["txonly"] == "T1w":
                 t=1
             elif cli_args["txonly"] == "T2w":
