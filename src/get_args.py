@@ -77,8 +77,7 @@ def get_params(stage_names):
               "Defaults to the path used by the container: {}".format(default_fsl_bin_path))
     )
     parser.add_argument(
-        "-tx", "--tx-only", 
-        type=valid_whole_number, dest="tx-only",
+        "-tx", "--tx-only", dest="tx-only", #add type
         help=("Specify if you would like to run using only T1w or T2w images "
               "for segmentation, which will determine which nnUNet task is used "
               "from {}".format(os.path.join(SCRIPT_DIR, "data", "models.csv")))
@@ -223,12 +222,10 @@ def validate_cli_args(cli_args, stage_names, parser):
 
         # Check whether this sub ses has T1w and/or T2w input data
         data_path_BIDS_T = dict()  # Paths to expected input data to check
-        print("LUCI TXONLY TEST")
-        if cli_args["txonly"] != None:
-            print(cli_args["txonly"])
-            if cli_args["txonly"] == "T1w":
+        if cli_args["tx-only"] != None:
+            if cli_args["tx-only"] == "T1w":
                 t=1
-            elif cli_args["txonly"] == "T2w":
+            elif cli_args["tx-only"] == "T2w":
                 t=2
             data_path_BIDS_T[t] = os.path.join(j_args["common"]["bids_dir"],
                                                *sub_ses, "anat",
@@ -241,7 +238,7 @@ def validate_cli_args(cli_args, stage_names, parser):
                                                 f"*T{t}w.nii.gz")
                 sub_ses_IDs[ix][f"has_T{t}w"] = bool(glob(data_path_BIDS_T[t]))
 
-        models_df = get_df_with_valid_bibsnet_models(sub_ses_IDs[ix])
+        models_df = get_df_with_valid_bibsnet_models(sub_ses_IDs[ix], j_args)
         sub_ses_IDs[ix]["model"] = validate_model_num(
             cli_args, data_path_BIDS_T, models_df, sub_ses_IDs[ix], parser
         )
@@ -286,8 +283,7 @@ def ensure_j_args_has_bids_subdirs(j_args, derivs, sub_ses, default_parent):
                     exist_ok=True)  # Make all subject-session output dirs
     return j_args
 
-
-def get_df_with_valid_bibsnet_models(sub_ses_ID):
+def get_df_with_valid_bibsnet_models(sub_ses_ID, j_args):
     """
     :param sub_ses_ID: Dictionary mapping subject-session-specific input
                        parameters' names (as strings) to their values for
@@ -298,7 +294,7 @@ def get_df_with_valid_bibsnet_models(sub_ses_ID):
     models_df = pd.read_csv(os.path.join(SCRIPT_DIR, "data", "models.csv"))
 
     # Exclude any models which require (T1w or T2w) data the user lacks
-    for t in only_Ts_needed_for_bibsnet_model(sub_ses_ID):
+    for t in only_Ts_needed_for_bibsnet_model(sub_ses_ID, j_args["bibsnet"]["tx-only"]):
         models_df = select_model_with_data_for_T(
             t, models_df, sub_ses_ID[f"has_T{t}w"]
         )

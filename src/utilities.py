@@ -64,7 +64,7 @@ def get_optimal_resized_paths(sub_ses, j_args):  # bibsnet_out_dir):
                     "_".join(sub_ses),
                     get_preBIBS_final_digit_T(t, j_args["ID"])
                 )
-            ) for t in only_Ts_needed_for_bibsnet_model(j_args["ID"])}
+            ) for t in only_Ts_needed_for_bibsnet_model(j_args["ID"], j_args["bibsnet"]["tx-only"])}
   
 
 def get_preBIBS_final_digit_T(t, sub_ses_ID):
@@ -130,16 +130,25 @@ def log_stage_finished(stage_name, event_time, sub_ses):
                         datetime.now() - event_time))
 
 
-def only_Ts_needed_for_bibsnet_model(sub_ses_ID):
+def only_Ts_needed_for_bibsnet_model(sub_ses_ID, txonly):
     """
     :param sub_ses_ID: Dictionary mapping subject-session-specific input
                        parameters' names (as strings) to their values for
                        this subject session; the same as j_args[ID]
+    :param: txonly, if only T1w- or T2w-only processing has been specified
     :yield: Int, each T value (1 and/or 2) which inputs exist for
     """
-    for t in (1, 2):
+    if txonly != None:
+        if txonly == "T1w":
+            t=1
+        elif txonly == "T2w":
+            t=2
         if sub_ses_ID[f"has_T{t}w"]:
             yield t
+    else:
+        for t in (1, 2):
+            if sub_ses_ID[f"has_T{t}w"]:
+                yield t
 
 
 def run_FSL_sh_script(j_args, fsl_fn_name, *fsl_args):
